@@ -1,0 +1,7 @@
+__pycache__/
+*.pyc
+Dataset/
+*.mp4
+*.jpg
+*.npy
+models/*.h5
