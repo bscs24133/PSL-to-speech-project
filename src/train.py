@@ -55,8 +55,14 @@ if __name__ == '__main__':
     model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
     model.summary()
 
-    model.fit(X_train, y_train_enc, batch_size=BATCH_SIZE,
-              epochs=EPOCHS, validation_data=(X_test, y_test_enc))
+    checkpoint = tf.keras.callbacks.ModelCheckpoint(
+        os.path.join(MODEL_SAVE_DIR, 'word_cnn.h5'),
+        monitor='val_accuracy',
+        save_best_only=True,
+        verbose=1
+    )
 
-    model.save(os.path.join(MODEL_SAVE_DIR, 'word_cnn.h5'))
-    print('Word CNN saved.')
+    model.fit(X_train, y_train_enc, batch_size=BATCH_SIZE,
+            epochs=EPOCHS, validation_data=(X_test, y_test_enc),
+            callbacks=[checkpoint])
+
