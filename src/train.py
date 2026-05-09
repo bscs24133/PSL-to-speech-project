@@ -2,7 +2,8 @@
 import numpy as np, os, tensorflow as tf
 from tensorflow.keras import layers, models
 from sklearn.preprocessing import LabelEncoder
-from config import FLOW_OUTPUT, MODEL_SAVE_DIR, BATCH_SIZE, EPOCHS
+from config import FLOW_OUTPUT, MODEL_SAVE_DIR, BATCH_S
+IZE, EPOCHS
 
 def load_flow_data(split='train'):
     X, y = [], []
