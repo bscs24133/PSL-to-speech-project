@@ -6,3 +6,4 @@ Dataset/
 *.npy
 models/*.h5
 src/config.py
+venv/
