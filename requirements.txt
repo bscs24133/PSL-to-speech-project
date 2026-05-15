@@ -9,3 +9,11 @@ pygame==2.6.0
 matplotlib==3.9.0
 scikit-learn==1.5.0
 Pillow==10.4.0
+
+
+deep-translator==1.11.4
+gtts==2.5.1
+pygame==2.5.2
+arabic-reshaper==3.0.0
+python-bidi==0.4.2
+Pillow==10.3.0

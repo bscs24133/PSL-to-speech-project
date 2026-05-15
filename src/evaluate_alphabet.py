@@ -7,7 +7,7 @@ datagen = ImageDataGenerator(rescale=1./255)
 
 test_gen = datagen.flow_from_directory(
     STATIC_TEST,
-    target_size=(224,224),
+    target_size=(64,64),
     batch_size=BATCH_SIZE,
     class_mode='categorical',
     shuffle=False
