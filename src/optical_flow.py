@@ -5,14 +5,19 @@ import os
 from preprocess import extract_frames
 from config import WORD_TRAIN, WORD_TEST, FLOW_OUTPUT
 
-def compute_flow(frames):
+def compute_flow(frames, target_frames=15, img_size=(64, 64)):
     flows = []
     for i in range(len(frames) - 1):
         prev = cv2.cvtColor(frames[i],   cv2.COLOR_BGR2GRAY)
         curr = cv2.cvtColor(frames[i+1], cv2.COLOR_BGR2GRAY)
         flow = cv2.calcOpticalFlowFarneback(prev, curr, None, 0.5, 3, 15, 3, 5, 1.2, 0)
         flows.append(flow)
-    return np.array(flows)
+    while len(flows) < target_frames:
+        flows.append(np.zeros((*img_size, 2), dtype=np.float32))
+    flows = flows[:target_frames]
+    result = np.array(flows)
+    assert result.shape == (target_frames, *img_size, 2), f"Unexpected shape: {result.shape}"
+    return result
 
 def process_dataset(split='train'):
     src = WORD_TRAIN if split == 'train' else WORD_TEST

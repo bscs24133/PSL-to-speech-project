@@ -2,8 +2,7 @@
 import numpy as np, os, tensorflow as tf
 from tensorflow.keras import layers, models
 from sklearn.preprocessing import LabelEncoder
-from config import FLOW_OUTPUT, MODEL_SAVE_DIR, BATCH_S
-IZE, EPOCHS
+from config import FLOW_OUTPUT, MODEL_SAVE_DIR, BATCH_SIZE, EPOCHS
 
 def load_flow_data(split='train'):
     X, y = [], []
@@ -36,15 +35,13 @@ def build_word_cnn(n_classes, input_shape=(15, 64, 64, 2)):
 if __name__ == '__main__':
     X_train, y_train = load_flow_data('train')
     X_test,  y_test  = load_flow_data('test')
-
     print(f"Train samples: {len(X_train)}, classes: {len(set(y_train))}")
     print(f"Test samples:  {len(X_test)},  classes: {len(set(y_test))}")
 
-    # fit on train (80 classes), test is a subset so transform works
     le = LabelEncoder()
     le.fit(y_train)
     n_classes = len(le.classes_)
-    print(f"Total classes: {n_classes}")  # should be 80
+    print(f"Total classes: {n_classes}")
 
     y_train_enc = tf.keras.utils.to_categorical(le.transform(y_train), num_classes=n_classes)
     y_test_enc  = tf.keras.utils.to_categorical(le.transform(y_test),  num_classes=n_classes)
@@ -62,8 +59,6 @@ if __name__ == '__main__':
         save_best_only=True,
         verbose=1
     )
-
     model.fit(X_train, y_train_enc, batch_size=BATCH_SIZE,
-            epochs=EPOCHS, validation_data=(X_test, y_test_enc),
-            callbacks=[checkpoint])
-
+              epochs=EPOCHS, validation_data=(X_test, y_test_enc),
+              callbacks=[checkpoint])

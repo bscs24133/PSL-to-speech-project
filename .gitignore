@@ -5,3 +5,4 @@ Dataset/
 *.jpg
 *.npy
 models/*.h5
+src/config.py
