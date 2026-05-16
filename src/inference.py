@@ -42,7 +42,7 @@ def run_word_inference(model, label_classes, frame_buffer: deque,
     idx = np.argmax(pred)
     confidence = pred[0][idx]
 
-    if confidence < 0.5:
+    if confidence < 0.75:
         return None
 
     return str(label_classes[idx])
@@ -53,15 +53,15 @@ def run_alpha_inference(model, label_classes, frame: np.ndarray) -> str | None:
     Image mode — single frame to alphabet CNN.
     Returns predicted label or None if confidence too low.
     """
-    small = preprocess_frame(frame)
+    small = cv2.resize(frame, (64, 64))
     inp = small.astype("float32") / 255.0
-    inp = np.expand_dims(inp, 0)                   # (1, 64, 64, 3)
+    inp = np.expand_dims(inp, 0)                   # (1, 224, 224, 3)
 
     pred = model.predict(inp, verbose=0)
     idx = np.argmax(pred)
     confidence = pred[0][idx]
 
-    if confidence < 0.5:
+    if confidence < 0.75:
         return None
 
     return str(label_classes[idx])
