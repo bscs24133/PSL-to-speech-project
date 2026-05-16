@@ -26,7 +26,7 @@ alpha_labels = [
 ]
 
 # ── Model paths ───────────────────────────────────────────────────────────────
-MODEL_DIR   = os.path.join(os.path.dirname(__file__), "../models")
+MODEL_DIR   = os.path.join(os.path.dirname(__file__), "models")
 WORD_MODEL  = os.path.join(MODEL_DIR, "word_cnn.h5")
 ALPHA_MODEL = os.path.join(MODEL_DIR, "alphabet_cnn.h5")
 LABELS_PATH = os.path.join(MODEL_DIR, "label_classes.npy")
@@ -49,6 +49,7 @@ last_roman       = ""
 stable_label     = ""
 stable_count     = 0
 STABLE_THRESHOLD = 5
+
 
 # ── Webcam ────────────────────────────────────────────────────────────────────
 cap = cv2.VideoCapture(0)

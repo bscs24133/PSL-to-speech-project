@@ -5,7 +5,7 @@ from PIL import ImageFont, ImageDraw, Image
 import numpy as np
 import cv2
 
-FONT_PATH = "/usr/share/fonts/truetype/noto/NotoNastaliqUrdu-Regular.ttf"
+FONT_PATH = r"C:\Windows\Fonts\Jameel Noori Nastaleeq.ttf"
 FONT_LARGE = ImageFont.truetype(FONT_PATH, 42)
 FONT_SMALL = ImageFont.truetype(FONT_PATH, 28)
 
@@ -29,11 +29,15 @@ def render_urdu_on_frame(frame, urdu_text: str, position: tuple = (20, 20),
     draw = ImageDraw.Draw(pil_img)
 
     # Shadow for readability
-    draw.text((position[0] + 2, position[1] + 2), urdu_text,
-              font=font, fill=(0, 0, 0), language="ur", direction="rtl")
+    draw.text((position[0] + 2, position[1] + 2),
+            urdu_text,
+            font=font,
+            fill=(0, 0, 0))
     # Main text
-    draw.text(position, urdu_text,
-              font=font, fill=color, language="ur", direction="rtl")
+    draw.text(position,
+          urdu_text,
+          font=font,
+          fill=color)
 
     return cv2.cvtColor(np.array(pil_img), cv2.COLOR_RGB2BGR)
 

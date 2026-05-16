@@ -6,5 +6,6 @@ Dataset/
 *.npy
 models/*.h5
 src/config.py
+src/urdu_renderer.py
 venv/
 models/
