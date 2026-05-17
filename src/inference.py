@@ -1,67 +1,91 @@
 # src/inference.py
-# Sliding window inference from webcam for word and alphabet recognition
-
 import cv2
 import numpy as np
 from collections import deque
-import sys
-import os
+import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
 from optical_flow import compute_flow
 
-WINDOW_SIZE = 16  # must match N_FRAMES in config.py
+WINDOW_SIZE = 16
 
+# ── ROI: fixed box where user places hand ─────────────────────────────────────
+# Adjust these 4 values so the yellow box covers your hand area on screen
+ROI_X1, ROI_Y1 = 320, 60
+ROI_X2, ROI_Y2 = 580, 380
 
-def preprocess_frame(frame, img_size=(64, 64)) -> np.ndarray:
-    """Resize and normalize a single frame."""
+def get_roi_box(frame):
+    return ROI_X1, ROI_Y1, ROI_X2, ROI_Y2
+
+def preprocess_for_model(image):
+    """Resize to 64x64, convert BGR→RGB, normalize — exactly matches training."""
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # ← ADD THIS LINE
+    resized = cv2.resize(image, (64, 64))
+    return np.expand_dims(resized.astype("float32") / 255.0, 0)
+
+def predict_snapshot(model, label_classes, frame):
+    """
+    Called on P keypress. Crops ROI, runs model, prints top 3.
+    No confidence threshold — always returns best guess so you can see results.
+    """
+    roi = frame[ROI_Y1:ROI_Y2, ROI_X1:ROI_X2].copy()
+
+    inp  = preprocess_for_model(roi)
+    pred = model.predict(inp, verbose=0)[0]
+
+    top3 = np.argsort(pred)[::-1][:3]
+    print("[snapshot] Top 3:")
+    for i, idx in enumerate(top3):
+        print(f"  Top{i+1}: {str(label_classes[idx]):15s}  conf={pred[idx]:.3f}")
+
+    cv2.imwrite("debug_model_input_64x64.png", cv2.resize(roi, (64, 64)))
+    cv2.imwrite("debug_roi.png", roi)
+
+    best_idx   = int(top3[0])
+    best_conf  = float(pred[best_idx])
+    best_label = str(label_classes[best_idx])
+
+    return best_label, best_conf, roi
+
+def extract_hand_on_white(frame):
+    """Returns roi crop for preview display. Simple — no complex segmentation."""
+    roi = frame[ROI_Y1:ROI_Y2, ROI_X1:ROI_X2].copy()
+    return roi, (ROI_X1, ROI_Y1, ROI_X2, ROI_Y2), np.ones(roi.shape[:2], np.uint8) * 255
+
+def run_alpha_inference(model, label_classes, frame):
+    roi  = frame[ROI_Y1:ROI_Y2, ROI_X1:ROI_X2].copy()
+    inp  = preprocess_for_model(roi)
+    pred = model.predict(inp, verbose=0)[0]
+    idx  = int(np.argmax(pred))
+    conf = float(pred[idx])
+    if conf < 0.75:
+        return None
+    return str(label_classes[idx])
+
+def preprocess_frame(frame, img_size=(64, 64)):
     return cv2.resize(frame, img_size)
 
-
 def run_word_inference(model, label_classes, frame_buffer: deque,
-                       new_frame: np.ndarray) -> str | None:
-    """
-    Video mode — sliding window over optical flow.
-    Returns predicted label or None if buffer not full yet.
-    """
-    small_frame = preprocess_frame(new_frame)
-    frame_buffer.append(small_frame)
+                       new_frame: np.ndarray):
+    frame_buffer.append(preprocess_frame(new_frame))
 
     if len(frame_buffer) < WINDOW_SIZE:
         return None
 
     frames = list(frame_buffer)
-    flows = []
+    flows  = []
     for i in range(len(frames) - 1):
-        flow = compute_flow([frames[i], frames[i+1]])
-        flows.append(flow[0])  # compute_flow returns array of flows
+        flow = compute_flow([frames[i], frames[i + 1]])
+        flows.append(flow[0])
 
-    flow_stack = np.stack(flows, axis=0)          # (15, 64, 64, 2)
-    flow_input = np.expand_dims(flow_stack, 0)     # (1, 15, 64, 64, 2)
-
-    pred = model.predict(flow_input, verbose=0)
-    idx = np.argmax(pred)
-    confidence = pred[0][idx]
-
-    if confidence < 0.75:
+    flow_stack = np.stack(flows, axis=0)
+    if flow_stack.shape != (WINDOW_SIZE - 1, 64, 64, 2):
         return None
 
-    return str(label_classes[idx])
+    pred = model.predict(np.expand_dims(flow_stack, 0), verbose=0)[0]
+    idx  = int(np.argmax(pred))
+    conf = float(pred[idx])
 
-
-def run_alpha_inference(model, label_classes, frame: np.ndarray) -> str | None:
-    """
-    Image mode — single frame to alphabet CNN.
-    Returns predicted label or None if confidence too low.
-    """
-    small = cv2.resize(frame, (64, 64))
-    inp = small.astype("float32") / 255.0
-    inp = np.expand_dims(inp, 0)                   # (1, 224, 224, 3)
-
-    pred = model.predict(inp, verbose=0)
-    idx = np.argmax(pred)
-    confidence = pred[0][idx]
-
-    if confidence < 0.75:
+    if conf < 0.75:
         return None
 
     return str(label_classes[idx])
