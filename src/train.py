@@ -8,6 +8,7 @@ from sklearn.utils.class_weight import compute_class_weight
 from collections import Counter
 from config import FLOW_OUTPUT, MODEL_SAVE_DIR, BATCH_SIZE, EPOCHS, N_FRAMES, IMG_SIZE
 
+from tensorflow.keras.regularizers import l2
 
 def load_flow_data(flow_dir):
     """Load all .npy flow files from a directory of label subfolders."""
@@ -22,8 +23,7 @@ def load_flow_data(flow_dir):
                 X.append(flow)
                 y.append(label)
     return np.array(X, dtype=np.float32), np.array(y)
-
-
+'''
 def build_cnn(n_classes, n_frames=N_FRAMES, img_size=IMG_SIZE):
     input_shape = (n_frames, img_size[0], img_size[1], 2)
     model = models.Sequential([
@@ -52,6 +52,50 @@ def build_cnn(n_classes, n_frames=N_FRAMES, img_size=IMG_SIZE):
         layers.Dropout(0.3),
         layers.Dense(n_classes, activation='softmax')
     ])
+    return model
+'''
+
+def build_cnn(n_classes, n_frames=N_FRAMES, img_size=IMG_SIZE):
+
+    input_shape = (n_frames, img_size[0], img_size[1], 2)
+
+    model = models.Sequential([
+
+        layers.Input(shape=input_shape),
+
+        layers.Reshape((n_frames * img_size[0],
+                         img_size[1], 2)),
+
+        layers.Conv2D(
+            16,
+            (3,3),
+            activation='relu',
+            padding='same',
+            kernel_regularizer=l2(1e-4)
+        ),
+        layers.BatchNormalization(),
+        layers.MaxPooling2D((2,2)),
+
+        layers.Conv2D(
+            32,
+            (3,3),
+            activation='relu',
+            padding='same',
+            kernel_regularizer=l2(1e-4)
+        ),
+        layers.BatchNormalization(),
+        layers.MaxPooling2D((2,2)),
+
+        layers.GlobalAveragePooling2D(),
+
+        layers.Dropout(0.6),
+
+        layers.Dense(
+            n_classes,
+            activation='softmax'
+        )
+    ])
+
     return model
 
 def train_model(task='word'):
@@ -96,9 +140,13 @@ def train_model(task='word'):
 
     # Build and compile
     model = build_cnn(n_classes)
-    model.compile(optimizer='adam',
-                  loss='categorical_crossentropy',
-                  metrics=['accuracy'])
+    model.compile(
+        optimizer='adam',
+        loss=tf.keras.losses.CategoricalCrossentropy(
+            label_smoothing=0.1
+        ),
+        metrics=['accuracy']
+    )
     model.summary()
 
     # Callbacks
@@ -111,28 +159,28 @@ def train_model(task='word'):
     reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(
         monitor='val_loss',
         factor=0.5,
-        patience=5,
+        patience=3,
         verbose=1
     )
+    '''
     early_stop = tf.keras.callbacks.EarlyStopping(
         monitor='val_accuracy',
-        patience=30,
+        patience=5,
         restore_best_weights=True,
         verbose=1
     )
-
+'''
     model.fit(
         X_train, y_train_enc,
         batch_size=BATCH_SIZE,
         epochs=EPOCHS,
         validation_data=(X_test, y_test_enc),
-        callbacks=[checkpoint, reduce_lr, early_stop],
+        callbacks=[checkpoint, reduce_lr],
         class_weight=class_weight_dict
     )
 
     print(f"\n{task.upper()} model saved to {MODEL_SAVE_DIR}")
 
-
 if __name__ == '__main__':
-    train_model('word')
+   # train_model('word')
     train_model('alpha')

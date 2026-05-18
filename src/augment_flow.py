@@ -10,7 +10,7 @@ from collections import Counter
 
 # ── Config ────────────────────────────────────────────────────────────────────
 FLOW_OUTPUT  = r'C:\Dataset\3_OpticalFlow'   # same as config.py
-TARGET_COUNT = 80   # how many train samples every class should have
+TARGET_COUNT =  120   # how many train samples every class should have
 SEED         = 42
 random.seed(SEED)
 np.random.seed(SEED)
@@ -35,7 +35,7 @@ def aug_time_stretch(flow, factor=None):
     """Subsample or repeat frames to simulate speed change."""
     T = flow.shape[0]
     if factor is None:
-        factor = random.uniform(0.75, 1.25)
+        factor = random.uniform(0.9, 1.1)
     new_len = int(T * factor)
     new_len = max(4, min(new_len, T * 2))
     indices = np.linspace(0, T - 1, new_len).astype(int)
@@ -102,7 +102,6 @@ def aug_rotate(flow, angle=None):
 AUGMENTATIONS = [
     aug_time_shift,
     aug_time_stretch,
-    aug_flip_horizontal,
     aug_add_noise,
     aug_scale_magnitude,
     aug_spatial_crop,

@@ -3,9 +3,9 @@ import cv2
 import numpy as np
 import os
 from preprocess import extract_frames
-from config import WORD_TRAIN, WORD_TEST, FLOW_OUTPUT
+from config import WORD_TRAIN, WORD_TEST, FLOW_OUTPUT,N_FRAMES
 
-def compute_flow(frames, target_frames=15, img_size=(64, 64)):
+def compute_flow(frames, target_frames=N_FRAMES, img_size=(64, 64)):
     flows = []
     for i in range(len(frames) - 1):
         prev = cv2.cvtColor(frames[i],   cv2.COLOR_BGR2GRAY)
