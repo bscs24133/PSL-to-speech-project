@@ -4,12 +4,11 @@ import numpy as np
 from collections import deque
 import sys, os
 sys.path.insert(0, os.path.dirname(__file__))
-from optical_flow import compute_flow
+from hand_crop_flow import compute_flow_with_hand_crop
 
 WINDOW_SIZE = 16
 
 # ── ROI: fixed box where user places hand ─────────────────────────────────────
-# Adjust these 4 values so the yellow box covers your hand area on screen
 ROI_X1, ROI_Y1 = 320, 60
 ROI_X2, ROI_Y2 = 580, 380
 
@@ -17,18 +16,16 @@ def get_roi_box(frame):
     return ROI_X1, ROI_Y1, ROI_X2, ROI_Y2
 
 def preprocess_for_model(image):
-    """Resize to 64x64, convert BGR→RGB, normalize — exactly matches training."""
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)  # ← ADD THIS LINE
+    """Resize to 64x64, convert BGR→RGB, normalize."""
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     resized = cv2.resize(image, (64, 64))
     return np.expand_dims(resized.astype("float32") / 255.0, 0)
 
 def predict_snapshot(model, label_classes, frame):
     """
     Called on P keypress. Crops ROI, runs model, prints top 3.
-    No confidence threshold — always returns best guess so you can see results.
     """
-    roi = frame[ROI_Y1:ROI_Y2, ROI_X1:ROI_X2].copy()
-
+    roi  = frame[ROI_Y1:ROI_Y2, ROI_X1:ROI_X2].copy()
     inp  = preprocess_for_model(roi)
     pred = model.predict(inp, verbose=0)[0]
 
@@ -47,7 +44,6 @@ def predict_snapshot(model, label_classes, frame):
     return best_label, best_conf, roi
 
 def extract_hand_on_white(frame):
-    """Returns roi crop for preview display. Simple — no complex segmentation."""
     roi = frame[ROI_Y1:ROI_Y2, ROI_X1:ROI_X2].copy()
     return roi, (ROI_X1, ROI_Y1, ROI_X2, ROI_Y2), np.ones(roi.shape[:2], np.uint8) * 255
 
@@ -66,19 +62,30 @@ def preprocess_frame(frame, img_size=(64, 64)):
 
 def run_word_inference(model, label_classes, frame_buffer: deque,
                        new_frame: np.ndarray):
+    """
+    Collects WINDOW_SIZE frames, computes optical flow with hand crop,
+    runs word model prediction.
+    """
     frame_buffer.append(preprocess_frame(new_frame))
 
     if len(frame_buffer) < WINDOW_SIZE:
         return None
 
     frames = list(frame_buffer)
-    flows  = []
-    for i in range(len(frames) - 1):
-        flow = compute_flow([frames[i], frames[i + 1]])
-        flows.append(flow[0])
 
-    flow_stack = np.stack(flows, axis=0)
-    if flow_stack.shape != (WINDOW_SIZE - 1, 64, 64, 2):
+    # compute_flow_with_hand_crop expects raw frames and returns (N_FRAMES, 64, 64, 2)
+    # It needs WINDOW_SIZE+1 frames to produce WINDOW_SIZE flow frames
+    # So we pass all WINDOW_SIZE frames and get WINDOW_SIZE-1 flows
+    # We pad with a zero flow to match model input of 16 frames
+    flow_stack = compute_flow_with_hand_crop(
+        frames,
+        target_frames=WINDOW_SIZE,   # pads/truncates to exactly 16
+        img_size=(64, 64)
+    )
+
+    # flow_stack shape: (16, 64, 64, 2) — matches model input exactly
+    if flow_stack.shape != (WINDOW_SIZE, 64, 64, 2):
+        print(f"[word] Unexpected flow shape: {flow_stack.shape}")
         return None
 
     pred = model.predict(np.expand_dims(flow_stack, 0), verbose=0)[0]
